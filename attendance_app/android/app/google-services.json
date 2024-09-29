@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "323697848346",
+    "project_id": "project-data-44b25",
+    "storage_bucket": "project-data-44b25.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:323697848346:android:8042f038fca3b4f60861a3",
+        "android_client_info": {
+          "package_name": "com.kavan.attendanceapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCCjWAVMLS1A6nRAXt24jKuTxf27BGizig"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
