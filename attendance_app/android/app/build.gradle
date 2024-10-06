@@ -45,7 +45,7 @@ android {
 }
 
 dependencies {
-    implementation platform('com.google.firebase:firebase-bom:2.8.0') // Use the latest BoM version
+    implementation platform('com.google.firebase:firebase-bom:33.3.0') // Use the latest BoM version
     implementation 'com.google.firebase:firebase-analytics' // Add Firebase services without version
     implementation 'com.google.firebase:firebase-auth' // Example for Firebase Auth
 }

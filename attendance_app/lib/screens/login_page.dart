@@ -2,6 +2,8 @@ import 'package:attendance_app/screens/admin_screen.dart';
 import 'package:attendance_app/screens/student_screen.dart';
 import 'package:attendance_app/screens/teacher_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -15,12 +17,12 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
-  String selectedRole = 'Student'; // Default role
+  String selectedRole = 'Admin'; // Default role
   final List<String> roles = [
-    'Student',
+    'Admin',
     'Teacher',
-    'Admin'
-  ]; //a list stored in variable roles for the dropdownlist
+    'Student'
+  ]; //a list stored in variable 'roles' for the dropdownlist
 
   //this code snippet will check the email format or whether it is null
   String? validateEmail(String? value) {
@@ -38,6 +40,64 @@ class _LoginPageState extends State<LoginPage> {
       return 'please enter your password';
     }
     return null;
+  }
+
+  // Function to handle sign-in and role validation
+  Future<void> signInWithEmailAndPassword(String email, String password) async {
+    try {
+      // Authenticate user
+      UserCredential userCredential =
+          await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      // Fetch user role from Firestore
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userCredential.user!.uid)
+          .get();
+
+      if (userDoc.exists) {
+        String role = userDoc['role'];
+
+        // Check if the selected role matches the Firestore role
+        if (role != selectedRole) {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text('This is a $role account')));
+          return;
+        }
+
+        // Navigate based on role
+        if (role == 'Student') {
+          Navigator.pushReplacement(context,
+              MaterialPageRoute(builder: (context) => const Studentscreen()));
+        } else if (role == 'Teacher') {
+          Navigator.pushReplacement(context,
+              MaterialPageRoute(builder: (context) => const Teacherscreen()));
+        } else if (role == 'Admin') {
+          Navigator.pushReplacement(context,
+              MaterialPageRoute(builder: (context) => const AdminScreen()));
+        } else {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(const SnackBar(content: Text('Unknown role')));
+        }
+      } else {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('User role not found')));
+      }
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'user-not-found') {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No user found for that email.')));
+      } else if (e.code == 'wrong-password') {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Wrong password provided.')));
+      } else {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error: ${e.message}')));
+      }
+    }
   }
 
   @override
@@ -115,7 +175,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
                 const SizedBox(height: 20),
-// Forgot Password Text
+// Forgot Password Text Button
                 TextButton(
                   onPressed: () {
                     Navigator.push(
@@ -131,26 +191,14 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 20),
 // Sign In Button
                 ElevatedButton(
-                  onPressed: () {
-                    //if this if-statement is true then only it will navigate, this line validates the email and the password
+                  onPressed: () async {
+                    //if this if-statement is true then only it will navigate&authenticate, this line validates email and password.
                     if (_formkey.currentState!.validate()) {
-                      //navigation will happen according to the role selection
-                      if (selectedRole == 'Student') {
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => const Studentscreen()));
-                      } else if (selectedRole == 'Teacher') {
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => const Teacherscreen()));
-                      } else {
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => const AdminScreen()));
-                      }
+                      String email = emailController.text;
+                      String password = passwordController.text;
+
+                      // Sign in and role-based redirection
+                      await signInWithEmailAndPassword(email, password);
                     }
                   },
                   style: ElevatedButton.styleFrom(
@@ -160,7 +208,9 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   child: const Text(
                     'Sign In',
-                    style: TextStyle(fontSize: 18),
+                    style: TextStyle(
+                        fontSize: 18,
+                        color: Color.fromARGB(255, 255, 253, 253)),
                   ),
                 ),
               ],
