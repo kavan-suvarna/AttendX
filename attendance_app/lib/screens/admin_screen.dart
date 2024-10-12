@@ -87,7 +87,6 @@ class AddUserScreenState extends State<AddUserScreen> {
               .set({
             'name': name,
             'email': email,
-            'password': password,
             'rollno': rollno,
             'class': class_name,
             'role': 'Student',
@@ -99,14 +98,15 @@ class AddUserScreenState extends State<AddUserScreen> {
               .set({
             'name': name,
             'email': email,
-            'password': password,
             'role': 'Teacher',
           });
         }
 
         //success message
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('User added successfully')));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('User added successfully')));
+        }
 
         //after adding clearing the screen
         nameController.clear();
@@ -116,8 +116,10 @@ class AddUserScreenState extends State<AddUserScreen> {
         classController.clear();
       } catch (e) {
         //incase of error
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+        if (mounted) {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+        }
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(

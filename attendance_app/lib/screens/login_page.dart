@@ -63,39 +63,49 @@ class _LoginPageState extends State<LoginPage> {
 
         // Check if the selected role matches the Firestore role
         if (role != selectedRole) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text('This is a $role account')));
-          return;
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('This is a $role account')));
+            // Sign out the user since role is incorrect
+            await FirebaseAuth.instance.signOut();
+            return;
+          }
         }
 
         // Navigate based on role
-        if (role == 'Student') {
-          Navigator.pushReplacement(context,
-              MaterialPageRoute(builder: (context) => const Studentscreen()));
-        } else if (role == 'Teacher') {
-          Navigator.pushReplacement(context,
-              MaterialPageRoute(builder: (context) => const Teacherscreen()));
-        } else if (role == 'Admin') {
-          Navigator.pushReplacement(context,
-              MaterialPageRoute(builder: (context) => const AdminScreen()));
-        } else {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(const SnackBar(content: Text('Unknown role')));
+        if (mounted) {
+          if (role == 'Student') {
+            Navigator.pushReplacement(context,
+                MaterialPageRoute(builder: (context) => const Studentscreen()));
+          } else if (role == 'Teacher') {
+            Navigator.pushReplacement(context,
+                MaterialPageRoute(builder: (context) => const Teacherscreen()));
+          } else if (role == 'Admin') {
+            Navigator.pushReplacement(context,
+                MaterialPageRoute(builder: (context) => const AdminScreen()));
+          } else {
+            ScaffoldMessenger.of(context)
+                .showSnackBar(const SnackBar(content: Text('Unknown role')));
+          }
         }
       } else {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('User role not found')));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('User role not found')));
+        }
       }
     } on FirebaseAuthException catch (e) {
-      if (e.code == 'user-not-found') {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('No user found for that email.')));
-      } else if (e.code == 'wrong-password') {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Wrong password provided.')));
-      } else {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: ${e.message}')));
+      if (mounted) {
+        if (e.code == 'user-not-found') {
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('No user found for that email.')));
+        } else if (e.code == 'wrong-password') {
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Wrong password provided.')));
+        } else {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text('Error: ${e.message}')));
+        }
       }
     }
   }
@@ -244,6 +254,30 @@ class _ForgotPasswordState extends State<ForgotPassword> {
     return null;
   }
 
+  // Function to send password reset email via Firebase
+  Future<void> sendPasswordResetEmail(String email) async {
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Password reset link sent to $email')),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        if (e.code == 'user-not-found') {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No user found with this email.')),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: ${e.message}')),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -274,9 +308,8 @@ class _ForgotPasswordState extends State<ForgotPassword> {
               ElevatedButton(
                   onPressed: () {
                     if (_formkey.currentState!.validate()) {
-                      String email = emailController.text;
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content: Text('Password reset link sent to $email')));
+                      String email = emailController.text.trim();
+                      sendPasswordResetEmail(email);
                     }
                   },
                   child: Text('Submit'))
