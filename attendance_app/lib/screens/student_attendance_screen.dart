@@ -131,7 +131,10 @@ class ViewAttendanceState extends State<ViewAttendance> {
                         Navigator.push(
                             context,
                             MaterialPageRoute(
-                                builder: (context) => DetailedAttendance()));
+                                builder: (context) => DetailedAttendance(
+                                    subjectName:
+                                        subject //passing the subject name dynamically
+                                    )));
                       },
                       child: const Text('Detailed Attendance'))
                 ],
@@ -142,7 +145,11 @@ class ViewAttendanceState extends State<ViewAttendance> {
   }
 }
 
+//calendar view of the attendance
 class DetailedAttendance extends StatefulWidget {
+  const DetailedAttendance({super.key, required this.subjectName});
+  final String subjectName; // Accept subject name from the previous screen
+
   @override
   DetailedAttendanceState createState() => DetailedAttendanceState();
 }
@@ -152,8 +159,7 @@ class DetailedAttendanceState extends State<DetailedAttendance> {
   DateTime? _selectedDay;
   String? uid;
 
-  Map<DateTime, bool> attendanceRecords =
-      {}; // To store the attendance data for calendar
+  Map<DateTime, bool> attendanceRecords = {}; // Store attendance data for the calendar
 
   @override
   void initState() {
@@ -167,28 +173,56 @@ class DetailedAttendanceState extends State<DetailedAttendance> {
       if (currentUser != null) {
         uid = currentUser.uid;
 
-        DocumentSnapshot subjectDoc = await FirebaseFirestore.instance
+        // Query the document where the 'subjectName' matches the provided subject
+        QuerySnapshot querySnapshot = await FirebaseFirestore.instance
             .collection('users')
-            .doc('uid')
+            .doc(uid)
             .collection('attendance')
-            .doc('AI')
+            .where('subjectName', isEqualTo: widget.subjectName) // Matching the subject name
             .get();
 
-        if (subjectDoc.exists) {
-          Map<String, dynamic> records = subjectDoc['detailedAttendance'];
-          setState(() {
-            attendanceRecords = records
-                .map((key, value) => MapEntry(DateTime.parse(key), value));
-          });
+        // Check if the document exists
+        if (querySnapshot.docs.isNotEmpty) {
+          DocumentSnapshot subjectDoc = querySnapshot.docs.first;
+
+          // Fetch the attendance data
+          if (subjectDoc.exists) {
+            Map<String, dynamic> records = subjectDoc['detailedAttendance'];
+            print('Fetched attendance records: $records');
+
+            // Convert the records map to use DateTime as keys
+            setState(() {
+              attendanceRecords = records.map((key, value) =>
+                  MapEntry(DateTime.parse(key), value == 'present'));
+              print('Mapped attendanceRecords: $attendanceRecords');
+            });
+          } else {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('No attendance records found')));
+            }
+          }
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('No document found for this subject')));
+          }
         }
-      }else{ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('No user currently logged in')));}
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('No user currently logged in')));
+      }
     } catch (e) {
-       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error fetching attendance records: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error fetching attendance records: $e')));
       }
     }
+  }
+
+  // Helper function to compare only the date part, ignoring the time.
+  bool isSameDayIgnoreTime(DateTime day1, DateTime day2) {
+    return day1.year == day2.year && day1.month == day2.month && day1.day == day2.day;
   }
 
   @override
@@ -208,11 +242,11 @@ class DetailedAttendanceState extends State<DetailedAttendance> {
               return isSameDay(_selectedDay, day);
             },
             eventLoader: (day) {
-              return attendanceRecords[day] == true
-                  ? ['present']
-                  : attendanceRecords[day] == false
-                      ? ['absent']
-                      : [];
+              // Check if there is an attendance record for this day
+              return attendanceRecords.entries
+                      .any((entry) => isSameDayIgnoreTime(entry.key, day))
+                  ? [attendanceRecords[day] == true ? 'present' : 'absent']
+                  : [];
             },
             onDaySelected: (selectedDay, focusedDay) {
               setState(() {
@@ -226,11 +260,13 @@ class DetailedAttendanceState extends State<DetailedAttendance> {
                 shape: BoxShape.circle,
               ),
               selectedDecoration: BoxDecoration(
-                color: Colors.green,
+                color: Colors.yellow,
                 shape: BoxShape.circle,
               ),
               markerDecoration: BoxDecoration(
-                color: Colors.red,
+                color: attendanceRecords[_selectedDay] == true
+                    ? Colors.green // Green dot for present
+                    : Colors.red, // Red dot for absent
                 shape: BoxShape.circle,
               ),
             ),
@@ -238,14 +274,21 @@ class DetailedAttendanceState extends State<DetailedAttendance> {
           Expanded(
             child: _selectedDay != null
                 ? Center(
-                    child: Text(attendanceRecords[_selectedDay!] == true
-                        ? 'Present on this day'
-                        : 'Absent on this day'),
+                    child: attendanceRecords.containsKey(_selectedDay)
+                        ? Text(attendanceRecords[_selectedDay!] == true
+                            ? 'Present on this day'
+                            : 'Absent on this day')
+                        : const Text('No attendance record for this day'),
                   )
-                : Center(child: Text('Select a day')),
+                : const Center(child: Text('Select a day')),
           ),
         ],
       ),
     );
   }
 }
+
+
+
+
+

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'teacher_markattendance_screen.dart';
 
 class Teacherscreen extends StatelessWidget {
   const Teacherscreen({super.key});
@@ -26,7 +27,7 @@ class Teacherscreen extends StatelessWidget {
                   Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (context) => const TMarkAttendance()));
+                          builder: (context) => TMarkAttendance()));
                 },
                 child: const Text('Mark Student Attendance')),
             const SizedBox(height: 35),
@@ -53,18 +54,6 @@ class TProfilePage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Profile')),
       body: const Center(child: Text('Profile Details')),
-    );
-  }
-}
-
-class TMarkAttendance extends StatelessWidget {
-  const TMarkAttendance({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Mark Student Attendance')),
-      body: const Center(child: Text('Mark attendance here')),
     );
   }
 }

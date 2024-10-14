@@ -34,7 +34,7 @@ class AdminScreen extends StatelessWidget {
   }
 }
 
-//Adding student and teacher screen
+// Adding student and teacher screen
 class AddUserScreen extends StatefulWidget {
   const AddUserScreen({super.key});
   @override
@@ -58,7 +58,6 @@ class AddUserScreenState extends State<AddUserScreen> {
     String email = emailController.text;
     String password = passwordController.text;
     int? rollno; // roll number as int
-    // ignore: non_constant_identifier_names
     String class_name = classController.text;
 
     // Validate roll number input
@@ -74,48 +73,71 @@ class AddUserScreenState extends State<AddUserScreen> {
 
     if (name.isNotEmpty && email.isNotEmpty && password.isNotEmpty) {
       try {
-        //firebase authentication: creating new user
+        // Firebase authentication: creating new user
         UserCredential userCredential =
             await _auth.createUserWithEmailAndPassword(
                 email: emailController.text, password: passwordController.text);
 
-        //check student or teacher and add to firestore
+        // Check student or teacher and add to Firestore
         if (selectedRole == 'Student') {
-          await firestore
-              .collection('users')
-              .doc(userCredential.user!.uid)
-              .set({
-            'name': name,
-            'email': email,
-            'rollno': rollno,
-            'class': class_name,
-            'role': 'Student',
-          });
-        } else {
-          await firestore
-              .collection('users')
-              .doc(userCredential.user!.uid)
-              .set({
+  // Define subjects based on the class
+  Map<String, List<String>> classSubjects = {
+    'TyBscCS': ["Artificial Intelligence", "Cyber Forensics", "Information & Network Security", "Project Management", "Software Testing & Quality Assurance", "AI_Practical", "CF_Practical", "INS_Practical", "STQA_Practical"],
+    'SyBscCS': ['OS', 'LA', 'DS','ADBMS','JAVA','WEB','GT']
+    // Add more classes and their subjects as needed
+  };
+
+  // Get subjects for the entered class
+  List<String> subjects = classSubjects[class_name] ?? [];
+
+  // Adding student data to Firestore
+  await firestore.collection('users').doc(userCredential.user!.uid).set({
+    'name': name,
+    'email': email,
+    'rollno': rollno,
+    'class': class_name,
+    'role': 'Student',
+  });
+
+  // Add attendance as a subcollection
+  for (var subject in subjects) {
+    await firestore
+        .collection('users')
+        .doc(userCredential.user!.uid)
+        .collection('attendance')
+        .doc(subject) // Each subject becomes a document in the attendance subcollection
+        .set({
+      'attendancePercentage': 0,
+      'presentHours': 0,
+      'totalHours': 0,
+      'subjectName': subject,
+      'detailedAttendance': {},
+    });
+  }
+}
+ else {
+          // Adding teacher data to Firestore
+          await firestore.collection('users').doc(userCredential.user!.uid).set({
             'name': name,
             'email': email,
             'role': 'Teacher',
           });
         }
 
-        //success message
+        // Success message
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('User added successfully')));
         }
 
-        //after adding clearing the screen
+        // After adding, clear the screen
         nameController.clear();
         emailController.clear();
         passwordController.clear();
         rollnoController.clear();
         classController.clear();
       } catch (e) {
-        //incase of error
+        // In case of error
         if (mounted) {
           ScaffoldMessenger.of(context)
               .showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
@@ -130,65 +152,67 @@ class AddUserScreenState extends State<AddUserScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(
-          title: const Text('Add User'),
-        ),
-        body: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-//select role
-              DropdownButtonFormField(
-                value: selectedRole,
-                items: roles.map((String role) {
-                  return DropdownMenuItem(value: role, child: Text(role));
-                }).toList(),
-                onChanged: (String? newValue) {
-                  setState(() {
-                    selectedRole = newValue!;
-                  });
-                },
-                decoration: const InputDecoration(labelText: 'Select Role'),
-              ),
-              const SizedBox(height: 20),
-//name
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: 'Name'),
-              ),
-//email
-              TextField(
-                controller: emailController,
-                decoration: const InputDecoration(labelText: 'Email'),
-              ),
-//password
-              TextField(
-                controller: passwordController,
-                obscureText: false,
-                decoration: const InputDecoration(labelText: 'Password'),
+      appBar: AppBar(
+        title: const Text('Add User'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Select role
+            DropdownButtonFormField(
+              value: selectedRole,
+              items: roles.map((String role) {
+                return DropdownMenuItem(value: role, child: Text(role));
+              }).toList(),
+              onChanged: (String? newValue) {
+                setState(() {
+                  selectedRole = newValue!;
+                });
+              },
+              decoration: const InputDecoration(labelText: 'Select Role'),
+            ),
+            const SizedBox(height: 20),
+            // Name
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(labelText: 'Name'),
+            ),
+            // Email
+            TextField(
+              controller: emailController,
+              decoration: const InputDecoration(labelText: 'Email'),
+            ),
+            // Password
+            TextField(
+              controller: passwordController,
+              obscureText: false,
+              decoration: const InputDecoration(labelText: 'Password'),
+            ),
+            const SizedBox(height: 10),
+            if (selectedRole == 'Student') ...[
+              // Roll No
+              TextFormField(
+                controller: rollnoController,
+                decoration: const InputDecoration(labelText: 'Roll Number'),
               ),
               const SizedBox(height: 10),
-              if (selectedRole == 'Student') ...[
-//roll no
-                TextFormField(
-                  controller: rollnoController,
-                  decoration: const InputDecoration(labelText: 'Roll Number'),
-                ),
-                const SizedBox(height: 10),
-//class
-                TextFormField(
-                  controller: classController,
-                  decoration: const InputDecoration(labelText: 'Class'),
-                ),
-                const SizedBox(height: 10),
-              ],
-              ElevatedButton(
-                onPressed: addUser,
-                child: const Text('Add User'),
-              )
+              // Class
+              TextFormField(
+                controller: classController,
+                decoration: const InputDecoration(labelText: 'Class'),
+              ),
+              const SizedBox(height: 10),
             ],
-          ),
-        ));
+            ElevatedButton(
+              onPressed: addUser,
+              child: const Text('Add User'),
+            )
+          ],
+        ),
+      ),
+    );
   }
 }
+
