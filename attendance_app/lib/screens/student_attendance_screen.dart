@@ -42,13 +42,21 @@ class ViewAttendanceState extends State<ViewAttendance> {
 
         //iterating over fetched subjects
         for (var doc in subjectSnapshot.docs) {
-          fetchedSubjects.add({
-            'subjectName': doc['subjectName'] ?? 'Unknown',
-            'attendancePercentage': doc['attendancePercentage'] ?? 0,
-            'totalHours': doc['totalHours'] ?? 0,
-            'presentHours': doc['presentHours'] ?? 0,
-          });
-        }
+        fetchedSubjects.add({
+          'subjectName': doc['subjectName'] ?? 'Unknown',
+          // Safely cast to double
+          'attendancePercentage': (doc['attendancePercentage'] is num)
+              ? (doc['attendancePercentage'] as num).toDouble()
+              : 0.0,
+          'totalHours': (doc['totalHours'] is num)
+              ? (doc['totalHours'] as num).toDouble()
+              : 0.0,
+          'presentHours': (doc['presentHours'] is num)
+              ? (doc['presentHours'] as num).toDouble()
+              : 0.0,
+        });
+      }
+
 
         setState(() {
           subjects = fetchedSubjects;
@@ -93,30 +101,31 @@ class ViewAttendanceState extends State<ViewAttendance> {
                 return buildSubjectTile(
                     context,
                     subject['subjectName'] ?? 'Unknown',
-                    subject['attendancePercentage'] ?? 0,
+                    subject['attendancePercentage']?.toDouble() ?? 0.0,
                     hasDetails: true,
-                    totalHours: subject['totalHours'] ?? 0,
-                    presentHours: subject['presentHours'] ?? 0);
+                    totalHours: subject['totalHours']?.toDouble() ?? 0.0,
+                    presentHours: subject['presentHours']?.toDouble() ?? 0.0);
               },
             ),
     );
   }
 
-  Widget buildSubjectTile(BuildContext context, String subject, int attendance,
+  Widget buildSubjectTile(
+      BuildContext context, String subject, double attendance,
       {bool isLow = false,
       bool hasDetails = false,
-      int? totalHours,
-      int? presentHours}) {
+      double? totalHours,
+      double? presentHours}) {
     return Card(
       child: ListTile(
         title: Text(subject),
         trailing: CircularPercentIndicator(
-          radius: 20.0,
+          radius: 21.0,
           lineWidth: 5.0,
           percent: (attendance / 100).clamp(0.0, 1.0),
           center: Text(
             '$attendance%',
-            style: TextStyle(fontSize: 12),
+            style: TextStyle(fontSize: 10),
           ),
           progressColor: isLow ? Colors.orange : Colors.green,
         ),
@@ -125,7 +134,7 @@ class ViewAttendanceState extends State<ViewAttendance> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                      'Total Hours:${totalHours ?? 0}\nPresent Hours:${presentHours ?? 0}'),
+                      'Total Hours:${totalHours ?? 0.0}\nPresent Hours:${presentHours ?? 0.0}'),
                   TextButton(
                       onPressed: () {
                         Navigator.push(
@@ -159,7 +168,8 @@ class DetailedAttendanceState extends State<DetailedAttendance> {
   DateTime? _selectedDay;
   String? uid;
 
-  Map<DateTime, bool> attendanceRecords = {}; // Store attendance data for the calendar
+  Map<DateTime, bool> attendanceRecords =
+      {}; // Store attendance data for the calendar
 
   @override
   void initState() {
@@ -178,7 +188,8 @@ class DetailedAttendanceState extends State<DetailedAttendance> {
             .collection('users')
             .doc(uid)
             .collection('attendance')
-            .where('subjectName', isEqualTo: widget.subjectName) // Matching the subject name
+            .where('subjectName',
+                isEqualTo: widget.subjectName) // Matching the subject name
             .get();
 
         // Check if the document exists
@@ -222,7 +233,9 @@ class DetailedAttendanceState extends State<DetailedAttendance> {
 
   // Helper function to compare only the date part, ignoring the time.
   bool isSameDayIgnoreTime(DateTime day1, DateTime day2) {
-    return day1.year == day2.year && day1.month == day2.month && day1.day == day2.day;
+    return day1.year == day2.year &&
+        day1.month == day2.month &&
+        day1.day == day2.day;
   }
 
   @override
@@ -287,8 +300,3 @@ class DetailedAttendanceState extends State<DetailedAttendance> {
     );
   }
 }
-
-
-
-
-

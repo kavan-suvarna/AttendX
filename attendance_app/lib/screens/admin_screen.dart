@@ -58,6 +58,7 @@ class AddUserScreenState extends State<AddUserScreen> {
     String email = emailController.text;
     String password = passwordController.text;
     int? rollno; // roll number as int
+    // ignore: non_constant_identifier_names
     String class_name = classController.text;
 
     // Validate roll number input
@@ -80,44 +81,60 @@ class AddUserScreenState extends State<AddUserScreen> {
 
         // Check student or teacher and add to Firestore
         if (selectedRole == 'Student') {
-  // Define subjects based on the class
-  Map<String, List<String>> classSubjects = {
-    'TyBscCS': ["Artificial Intelligence", "Cyber Forensics", "Information & Network Security", "Project Management", "Software Testing & Quality Assurance", "AI_Practical", "CF_Practical", "INS_Practical", "STQA_Practical"],
-    'SyBscCS': ['OS', 'LA', 'DS','ADBMS','JAVA','WEB','GT']
-    // Add more classes and their subjects as needed
-  };
+          // Define subjects based on the class
+          Map<String, List<String>> classSubjects = {
+            'TyBscCS': [
+              "Artificial Intelligence",
+              "Cyber Forensics",
+              "Information & Network Security",
+              "Project Management",
+              "Software Testing & Quality Assurance",
+              "AI_Practical",
+              "CF_Practical",
+              "INS_Practical",
+              "STQA_Practical"
+            ],
+            'SyBscCS': ['OS', 'LA', 'DS', 'ADBMS', 'JAVA', 'WEB', 'GT']
+            // Add more classes and their subjects as needed
+          };
 
-  // Get subjects for the entered class
-  List<String> subjects = classSubjects[class_name] ?? [];
+          // Get subjects for the entered class
+          List<String> subjects = classSubjects[class_name] ?? [];
 
-  // Adding student data to Firestore
-  await firestore.collection('users').doc(userCredential.user!.uid).set({
-    'name': name,
-    'email': email,
-    'rollno': rollno,
-    'class': class_name,
-    'role': 'Student',
-  });
+          // Adding student data to Firestore
+          await firestore
+              .collection('users')
+              .doc(userCredential.user!.uid)
+              .set({
+            'name': name,
+            'email': email,
+            'rollno': rollno,
+            'class': class_name,
+            'role': 'Student',
+          });
 
-  // Add attendance as a subcollection
-  for (var subject in subjects) {
-    await firestore
-        .collection('users')
-        .doc(userCredential.user!.uid)
-        .collection('attendance')
-        .doc(subject) // Each subject becomes a document in the attendance subcollection
-        .set({
-      'attendancePercentage': 0,
-      'presentHours': 0,
-      'totalHours': 0,
-      'subjectName': subject,
-      'detailedAttendance': {},
-    });
-  }
-}
- else {
+          // Add attendance as a subcollection
+          for (var subject in subjects) {
+            await firestore
+                .collection('users')
+                .doc(userCredential.user!.uid)
+                .collection('attendance')
+                .doc(
+                    subject) // Each subject becomes a document in the attendance subcollection
+                .set({
+              'attendancePercentage': 0.0,
+              'presentHours': 0.0,
+              'totalHours': 0.0,
+              'subjectName': subject,
+              'detailedAttendance': {},
+            });
+          }
+        } else {
           // Adding teacher data to Firestore
-          await firestore.collection('users').doc(userCredential.user!.uid).set({
+          await firestore
+              .collection('users')
+              .doc(userCredential.user!.uid)
+              .set({
             'name': name,
             'email': email,
             'role': 'Teacher',
@@ -215,4 +232,3 @@ class AddUserScreenState extends State<AddUserScreen> {
     );
   }
 }
-

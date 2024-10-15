@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class TMarkAttendance extends StatefulWidget {
   const TMarkAttendance({super.key});
@@ -12,21 +13,50 @@ class TMarkAttendanceState extends State<TMarkAttendance> {
   String? selectedClass;
   String? selectedSubject;
   DateTime? selectedDate;
+  TimeOfDay? startTime;
+  TimeOfDay? endTime;
   Map<String, bool> attendanceMap =
       {}; // Map of student ID to attendance (true: present, false: absent)
+  bool isSaving = false;
+  bool isButtonDisabled = false; // Flag to keep track of button state
 
-  List<String> classes = ['TyBscCS', 'SyBscCS', 'FyBscCS']; // Add class options
-  List<String> subjects = [
-    "Artificial Intelligence",
-    "Cyber Forensics",
-    "Information & Network Security",
-    "Project Management",
-    "Software Testing & Quality Assurance",
-    "AI_Practical",
-    "CF_Practical",
-    "INS_Practical",
-    "STQA_Practical"
-  ]; // Subject options
+  // Class and subject mapping
+  Map<String, List<String>> classSubjects = {
+    "TyBscCS": [
+      "Artificial Intelligence",
+      "Cyber Forensics",
+      "Information & Network Security",
+      "Project Management",
+      "Software Testing & Quality Assurance",
+      "AI_Practical",
+      "CF_Practical",
+      "INS_Practical",
+      "STQA_Practical"
+    ],
+    'SyBscCS': ['OS', 'LA', 'DS', 'ADBMS', 'JAVA', 'WEB', 'GT'],
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    _checkButtonState(); // Check if attendance has already been marked
+  }
+
+  // Function to check the saved button state
+  Future<void> _checkButtonState() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    bool? savedState = prefs.getBool('isButtonDisabled');
+    setState(() {
+      isButtonDisabled = savedState ?? false; // Default is false if no state saved
+    });
+  }
+
+  // Function to save the button state
+  Future<void> _saveButtonState(bool state) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isButtonDisabled', state);
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -39,43 +69,50 @@ class TMarkAttendanceState extends State<TMarkAttendance> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            //class dropdown
+            // Class dropdown
             DropdownButtonFormField<String>(
               value: selectedClass,
               hint: Text('Select Class'),
               onChanged: (newValue) {
                 setState(() {
                   selectedClass = newValue;
+                  selectedSubject = null; // Reset subject when class changes
+                  isButtonDisabled = false; // Reset the button state
+                  _saveButtonState(false); // Reset the saved state
                 });
               },
-              items: classes.map((classItem) {
+              items: classSubjects.keys.map((classItem) {
                 return DropdownMenuItem(
                   value: classItem,
                   child: Text(classItem),
                 );
               }).toList(),
             ),
-            SizedBox(
-              height: 20,
-            ),
-            // Subject Dropdown
+            SizedBox(height: 20),
+
+            // Subject dropdown (depends on selected class)
             DropdownButtonFormField<String>(
               value: selectedSubject,
               hint: Text('Select Subject'),
               onChanged: (newValue) {
                 setState(() {
                   selectedSubject = newValue;
+                  isButtonDisabled = false; // Reset the button state
+                  _saveButtonState(false); // Reset the saved state
                 });
               },
-              items: subjects.map((subject) {
-                return DropdownMenuItem(
-                  value: subject,
-                  child: Text(subject),
-                );
-              }).toList(),
+              items: selectedClass != null
+                  ? classSubjects[selectedClass]!.map((subject) {
+                      return DropdownMenuItem(
+                        value: subject,
+                        child: Text(subject),
+                      );
+                    }).toList()
+                  : [],
             ),
 
             SizedBox(height: 20),
+
             // Date Picker
             ElevatedButton(
               onPressed: () async {
@@ -88,6 +125,8 @@ class TMarkAttendanceState extends State<TMarkAttendance> {
                 if (pickedDate != null) {
                   setState(() {
                     selectedDate = pickedDate;
+                    isButtonDisabled = false; // Reset the button state
+                    _saveButtonState(false); // Reset the saved state
                   });
                 }
               },
@@ -96,9 +135,50 @@ class TMarkAttendanceState extends State<TMarkAttendance> {
                   : DateFormat('yyyy-MM-dd').format(selectedDate!)),
             ),
 
+            // Time Picker for start and end times
+            Row(
+              children: [
+                ElevatedButton(
+                  onPressed: () async {
+                    TimeOfDay? pickedStartTime = await showTimePicker(
+                      context: context,
+                      initialTime: TimeOfDay.now(),
+                    );
+                    if (pickedStartTime != null) {
+                      setState(() {
+                        startTime = pickedStartTime;
+                      });
+                    }
+                  },
+                  child: Text(startTime == null
+                      ? 'Select Start Time'
+                      : 'Start: ${startTime!.format(context)}'),
+                ),
+                SizedBox(width: 10),
+                ElevatedButton(
+                  onPressed: () async {
+                    TimeOfDay? pickedEndTime = await showTimePicker(
+                      context: context,
+                      initialTime: TimeOfDay.now(),
+                    );
+                    if (pickedEndTime != null) {
+                      setState(() {
+                        endTime = pickedEndTime;
+                      });
+                    }
+                  },
+                  child: Text(endTime == null
+                      ? 'Select End Time'
+                      : 'End: ${endTime!.format(context)}'),
+                ),
+              ],
+            ),
+
+            SizedBox(height: 20),
+            Text('CLICK CHECKBOX IF PRESENT'),
             SizedBox(height: 20),
 
-            // List of Students
+            // List of students
             selectedClass != null &&
                     selectedSubject != null &&
                     selectedDate != null
@@ -107,14 +187,22 @@ class TMarkAttendanceState extends State<TMarkAttendance> {
 
             // Save Attendance Button
             ElevatedButton(
-              onPressed: () {
+              onPressed:isButtonDisabled || isSaving // Disable the button if attendance already marked
+                  ? null
+                  :  () {
                 if (selectedClass != null &&
                     selectedSubject != null &&
-                    selectedDate != null) {
+                    selectedDate != null &&
+                    startTime != null &&
+                    endTime != null) {
                   _saveAttendance();
                 }
               },
-              child: Text('Save Attendance'),
+               child: Text(isButtonDisabled
+                  ? 'Attendance Already Marked'
+                  : isSaving
+                      ? 'Saving...'
+                      : 'Save Attendance'),
             ),
           ],
         ),
@@ -122,7 +210,6 @@ class TMarkAttendanceState extends State<TMarkAttendance> {
     );
   }
 
-  // Fetch and display students based on selected class and role
   Widget _buildStudentList() {
     return StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
@@ -145,8 +232,13 @@ class TMarkAttendanceState extends State<TMarkAttendance> {
                 String studentName = student['name'];
                 String studentId = student.id;
 
+                // Initialize absent students as false if not already set
+                if (!attendanceMap.containsKey(studentId)) {
+                  attendanceMap[studentId] = false; // Set absent by default
+                }
+
                 return ListTile(
-                  title: Text(studentName),
+                  title: Text(studentName), 
                   trailing: Checkbox(
                       value: attendanceMap[studentId] ?? false,
                       onChanged: (bool? value) {
@@ -159,53 +251,102 @@ class TMarkAttendanceState extends State<TMarkAttendance> {
         });
   }
 
-  // Save attendance to Firestore
-  Future<void> _saveAttendance() async {
-  String formattedDate = DateFormat('yyyy-MM-dd').format(selectedDate!);
-
-  for (var entry in attendanceMap.entries) {
-    String studentId = entry.key;
-    bool isPresent = entry.value;
-
-    // Reference to the attendance subcollection for the student
-    CollectionReference attendanceCollection = FirebaseFirestore.instance
-        .collection('users')
-        .doc(studentId)
-        .collection('attendance');
-
-    // Check if an attendance document for the selected subject and date exists
-    DocumentReference attendanceDoc = attendanceCollection.doc(selectedSubject);
-
-    // Fetch the attendance document if it exists
-    DocumentSnapshot attendanceSnapshot = await attendanceDoc.get();
-
-    if (attendanceSnapshot.exists) {
-      // Update the existing attendance record
-      Map<String, dynamic> existingAttendanceData = attendanceSnapshot.data() as Map<String, dynamic>;
-
-      existingAttendanceData['detailedAttendance'][formattedDate] =
-          isPresent ? 'present' : 'absent';
-
-      await attendanceDoc.update({
-        'detailedAttendance': existingAttendanceData['detailedAttendance'],
-      });
-    } else {
-      // Create a new attendance document for the subject
-      await attendanceDoc.set({
-        'attendancePercentage': 0,
-        'presentHours': 0,
-        'totalHours': 0,
-        'subjectName': selectedSubject,
-        'detailedAttendance': {
-          formattedDate: isPresent ? 'present' : 'absent',
-        },
-      });
-    }
+  // Function to calculate duration in hours
+  double _calculateLectureDuration() {
+    final start = DateTime(0, 0, 0, startTime!.hour, startTime!.minute);
+    final end = DateTime(0, 0, 0, endTime!.hour, endTime!.minute);
+    return end.difference(start).inMinutes / 60.0;
   }
 
-  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-    content: Text('Attendance saved successfully!'),
-  ));
-}
+// Save attendance to Firestore
+  Future<void> _saveAttendance() async {
+     setState(() {
+      isSaving = true;
+    });
+    String formattedDate = DateFormat('yyyy-MM-dd').format(selectedDate!);
+    double lectureDuration = _calculateLectureDuration();
+    String formattedStartTime = startTime!.format(context);
+    String formattedEndTime = endTime!.format(context);
 
+    for (var entry in attendanceMap.entries) {
+      String studentId = entry.key;
+      bool isPresent = entry.value;
+
+      CollectionReference attendanceCollection = FirebaseFirestore.instance
+          .collection('users')
+          .doc(studentId)
+          .collection('attendance');
+
+      DocumentReference attendanceDoc =
+          attendanceCollection.doc(selectedSubject);
+
+      try {
+        // Fetch the existing attendance document
+        DocumentSnapshot attendanceSnapshot = await attendanceDoc.get();
+
+        // Initialize data holders
+        double currentPresentHours = 0;
+        double currentTotalHours = 0;
+        Map<String, dynamic> detailedAttendance = {};
+
+        if (attendanceSnapshot.exists) {
+          // Retrieve existing data if available
+          Map<String, dynamic> existingAttendanceData =
+              attendanceSnapshot.data() as Map<String, dynamic>;
+
+          currentPresentHours = existingAttendanceData['presentHours'] ?? 0;
+          currentTotalHours = existingAttendanceData['totalHours'] ?? 0;
+          detailedAttendance =
+              existingAttendanceData['detailedAttendance'] ?? {};
+        }
+
+        // Update the detailedAttendance map for the current date for both present and absent students
+        detailedAttendance[formattedDate] = {
+          'status': isPresent ? 'present' : 'absent',
+          'startTime': formattedStartTime,
+          'endTime': formattedEndTime,
+        };
+
+        // Always update total hours since the lecture was held for all students
+        currentTotalHours += lectureDuration;
+
+        // Update present hours only if the student was marked present
+        if (isPresent) {
+          currentPresentHours += lectureDuration;
+        }
+
+        // Calculate the updated attendance percentage
+        double attendancePercentage = (currentTotalHours > 0)
+            ? (currentPresentHours / currentTotalHours) * 100
+            : 0;
+
+        // Use set with merge: true to avoid overwriting existing data
+        await attendanceDoc.set({
+          'detailedAttendance': detailedAttendance,
+          'totalHours': currentTotalHours,
+          'presentHours': currentPresentHours,
+          'attendancePercentage': attendancePercentage,
+          'subjectName': selectedSubject,
+        }, SetOptions(merge: true));
+
+        setState(() {
+          isSaving = false;
+          isButtonDisabled = true; // Disable the button after saving attendance
+        });
+
+        // Save the button state to persist across sessions
+        _saveButtonState(true);
+      } catch (e) {
+        // Handle potential errors
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to save attendance: $e')),
+          );
+        }
+         setState(() {
+          isSaving = false;
+        });
+      }
+    }
+  }
 }
