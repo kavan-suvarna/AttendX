@@ -1,35 +1,103 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'admin_fun.dart';
 
 class AdminScreen extends StatelessWidget {
   const AdminScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Admin Panel'),
+        backgroundColor: Colors.deepPurple[100],
+        title: const Text(
+          'Admin Panel',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        actions: [
+          IconButton(
+            onPressed: () {
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (context) => AProfilePage()));
+            },
+            icon: const Icon(Icons.person_outline),
+          )
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            ElevatedButton(
-                onPressed: () {
-                  Navigator.push(context,
-                      MaterialPageRoute(builder: (context) => AddUserScreen()));
-                },
-                child: const Text('Add User')),
-            const SizedBox(
-              height: 10,
+            const Text(
+              'Welcome to Admin Panel',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+              textAlign: TextAlign.center,
             ),
-            ElevatedButton(onPressed: () {}, child: const Text('Remove User')),
-            const SizedBox(height: 10),
-            ElevatedButton(onPressed: () {}, child: const Text('View Users'))
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (context) => AddUserScreen()));
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color.fromARGB(255, 203, 214, 191),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 4,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+              child: const Text(
+                'Add User',
+                style: TextStyle(fontSize: 18),
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (context) => ManageUsers()));
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color.fromARGB(255, 203, 214, 191),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 4,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+              child: const Text(
+                'Remove User',
+                style: TextStyle(fontSize: 18),
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {Navigator.push(context,
+                    MaterialPageRoute(builder: (context) => ViewUsersScreen()));},
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color.fromARGB(255, 203, 214, 191),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 4,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+              child: const Text(
+                'View Users',
+                style: TextStyle(fontSize: 18),
+              ),
+            ),
           ],
         ),
       ),
+      backgroundColor: Colors.grey.shade100,
     );
   }
 }
@@ -218,7 +286,7 @@ class AddUserScreenState extends State<AddUserScreen> {
               // Class
               TextFormField(
                 controller: classController,
-                decoration: const InputDecoration(labelText: 'Class'),
+                decoration: const InputDecoration(labelText: 'Class', hintText: "eg. TyBscCS"),
               ),
               const SizedBox(height: 10),
             ],
