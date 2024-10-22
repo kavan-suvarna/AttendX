@@ -201,7 +201,6 @@ class ManageUsersState extends State<ManageUsers> {
       // Refresh user list
       fetchUsers();
     } catch (e) {
-      print('Error deleting user: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error removing user')),

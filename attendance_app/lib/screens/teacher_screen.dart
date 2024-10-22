@@ -68,26 +68,6 @@ class Teacherscreen extends StatelessWidget {
                 Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (context) => TViewEditAttendance()));
-              },
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 18),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 5,
-              ),
-              child: const Text(
-                'Edit Attendance',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
                         builder: (context) => TViewStudent()));
               },
               style: ElevatedButton.styleFrom(
@@ -253,6 +233,8 @@ class TProfilePageState extends State<TProfilePage> {
 }
 
 class TViewStudent extends StatefulWidget {
+  const TViewStudent({super.key});
+
   @override
   _TViewStudentState createState() => _TViewStudentState();
 }
